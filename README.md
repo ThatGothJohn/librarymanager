@@ -3,7 +3,7 @@ A Python script designed to automatically rename and edit the metadata of large 
 
 # Dependancies
 * ffmpeg
-##pip packages:
+## pip packages:
 * python-decouple
 * tmdbv3api
 * regex
@@ -22,5 +22,7 @@ A Python script designed to automatically rename and edit the metadata of large 
 
 # How to use
 * Run ```librarymanager.py <media directory>```
+
 If you are wanting to take advantage of the hashing functionality run: ```librarymanager.py --hash <media directory>``` to build a database of hashes of all of your media files
+
 To check the integrity of your media files against the database run: ```librarymanager.py --check <media directory>```
