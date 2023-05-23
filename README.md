@@ -18,7 +18,6 @@ A Python script designed to automatically rename and edit the metadata of large 
 ## Current limitations
 * Requires movie folders to be named the name of the movie and only contain the movies video file
 * Requires tv show folders to be named the name of the show and include either "season" or "series" (case-insensitive) followed by the season number excluding season 1's
-* The initial run through without flags can only run once or it will delete your media files!
 
 # How to use
 * Run ```librarymanager.py <media directory>```
