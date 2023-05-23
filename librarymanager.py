@@ -15,7 +15,7 @@ import sqlite3
 no_ffmpeg = False
 delete_old = True
 check_db = False
-no_hash = False#
+no_hash = False
 
 #global variable for db connection
 db=None
@@ -54,74 +54,74 @@ def process_series(path):
         newfilename = f"({show[0].name}) [S{season_number}E{str(episode.episode_number).zfill(order_of_mag_of_episode_count)}] {episode.name}{files[x][-4:]}"
         print(f"{files[x]} -> {newfilename}") #generate a newfile name using the episode details and show the user
         if not no_ffmpeg: #if running ffmpeg
-            ffmpeg_command = f'ffmpeg -loglevel quiet -i "{path}/{files[x]}" -metadata title="{episode.name}" -metadata show="{show[0].name}" -metadata episode_id={episode.episode_number} -c copy -map 0 "{path}/{newfilename}"'
+            ffmpeg_command = f'ffmpeg -n -loglevel quiet -i "{path}/{files[x]}" -metadata title="{episode.name}" -metadata show="{show[0].name}" -metadata episode_id={episode.episode_number} -c copy -map 0 "{path}/{newfilename}"'
             print(f"Running: {ffmpeg_command}") #generate a command to fill in the correct metadata from the episode info
             os.system(ffmpeg_command) #and run it
             if delete_old and files[x] != newfilename:
                 os.remove(f"{path}/{files[x]}") #if deleting old files and it's filename doesn't match the generated one, delete it
-        if check_db:
+        if check_db: #If checking the database of hashes
             print(f"Checking hash for {files[x]}")
-            file_hash = hash_md5(os.getcwd()+"/"+path[2:]+"/"+files[x])
+            file_hash = hash_md5(os.getcwd()+"/"+path[2:]+"/"+files[x]) #get the hash of the file
             cur = db.cursor()
-            sql = f'SELECT hash from tvhashes WHERE filename = "{files[x]}"'
+            sql = f'SELECT hash from tvhashes WHERE filename = "{files[x]}"' #get the stored hash from the database
             cur.execute(sql)
-            if file_hash != cur.fetchall()[0][0]:
+            if file_hash != cur.fetchall()[0][0]: #If the hash is different, report failed hash check
                 print(f"\n\n{files[x]} failed hash check!\n\n")
-            else:
+            else: #otherwise report successful hash check
                 print(f"\t{files[x]} passed hash check!")
-        if not no_hash:
+        if not no_hash: #if creating new hashes and storing them to a database
             print(f"Hashing {files[x]}")
-            file_hash = hash_md5(os.getcwd()+"/"+path[2:]+"/"+files[x])
+            file_hash = hash_md5(os.getcwd()+"/"+path[2:]+"/"+files[x]) #hash the file
             cur = db.cursor()
-            sql = f"INSERT INTO tvhashes(filename,hash) VALUES(?,?)"            
+            sql = f"INSERT INTO tvhashes(filename,hash) VALUES(?,?)" #insert it into the database      
             if no_ffmpeg:
                 cur.execute(sql, (files[x], file_hash))
             else:
                 cur.execute(sql, (newfilename, file_hash))
             db.commit()
-    if not no_hash or check_db:
+    if not no_hash or check_db: #close the database connection if opened
         db.close()
 
 ###Function for handling movies
 def process_movie(path):
     movie = Movie()
-    results = movie.search(path)
-    if not results:
+    results = movie.search(path) #Use the TMDb movie API to search for the directory name
+    if not results: #If it's not found, report to the user and carry on
         print(f"Movie {path} not found!")
         return
-    movie_file = os.listdir(path)[0]
-    newfilename = results[0].title+movie_file[-4:]
+    movie_file = os.listdir(path)[0] #get the movie's filename
+    newfilename = results[0].title+movie_file[-4:] #generate new filename 
     print(f"{movie_file} -> {newfilename}")
-    if not no_ffmpeg:
-        ffmpeg_command = f'ffmpeg -loglevel quiet -i "{path}/{movie_file}" -metadata title="{results[0].title}" -metadata year="{results[0].release_date[:4]}" -c copy -map 0 "{path}/{newfilename}"'
-        print(f"Running: {ffmpeg_command}")
+    if not no_ffmpeg: #if running ffmpeg
+        ffmpeg_command = f'ffmpeg -n -loglevel quiet -i "{path}/{movie_file}" -metadata title="{results[0].title}" -metadata year="{results[0].release_date[:4]}" -c copy -map 0 "{path}/{newfilename}"'
+        print(f"Running: {ffmpeg_command}") #generate a command to fill in the correct metadata from the TMDb movie info
         os.system(ffmpeg_command)
-        if delete_old and movie_file != newfilename:
-            os.remove(f"{path}/{movie_file}")
-    if check_db:
-        db = sqlite3.connect("MediaLibrary.db")
+        if delete_old and movie_file != newfilename: 
+            os.remove(f"{path}/{movie_file}") #if deleting old files and it's filename doesn't match the generated one, delete it
+    if check_db:#if checking hashes against existing database
+        db = sqlite3.connect("MediaLibrary.db") #connect to the database
         print(f"Checking hash for {movie_file}")
-        file_hash = hash_md5(os.getcwd()+"/"+path[2:]+"/"+movie_file)
+        file_hash = hash_md5(os.getcwd()+"/"+path[2:]+"/"+movie_file) #hash the file
         cur = db.cursor()
-        sql = f'SELECT hash from moviehashes WHERE filename = "{movie_file}"'
+        sql = f'SELECT hash from moviehashes WHERE filename = "{movie_file}"' #get the file hash from the database
         cur.execute(sql)
-        if file_hash != cur.fetchall()[0][0]:
+        if file_hash != cur.fetchall()[0][0]: ##compare the two hashes, if they don't match report to the user and continue
             print(f"\n\n{movie_file} failed hash check!\n\n")
-        else:
+        else: #or report that they do match
             print(f"\t{movie_file} passed hash check!")
-        db.close()
-    if not no_hash:
-            db = sqlite3.connect("MediaLibrary.db")
-            print(f"Hashing {movie_file}")
-            file_hash = hash_md5(os.getcwd()+"/"+path[2:]+"/"+movie_file)
-            cur = db.cursor()
-            sql = f"INSERT INTO moviehashes(filename,hash) VALUES(?,?)"            
-            if no_ffmpeg:
-                cur.execute(sql, (movie_file, file_hash))
-            else:
-                cur.execute(sql, (newfilename, file_hash))
-            db.commit()
-            db.close()
+        db.close() #close database connection
+    if not no_hash: #If hashing files and storing the hashes in a new database
+        db = sqlite3.connect("MediaLibrary.db")
+        print(f"Hashing {movie_file}")
+        file_hash = hash_md5(os.getcwd()+"/"+path[2:]+"/"+movie_file)#hash the file
+        cur = db.cursor()
+        sql = f"INSERT INTO moviehashes(filename,hash) VALUES(?,?)" #store the hash in the database    
+        if no_ffmpeg:
+            cur.execute(sql, (movie_file, file_hash))
+        else:
+            cur.execute(sql, (newfilename, file_hash))
+        db.commit()
+        db.close() #commit the changes to the database and close the connection
 
 ###Function for determining if a directory is for a tv show or a movie
 def check_dir(path):
